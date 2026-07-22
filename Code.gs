@@ -28,19 +28,81 @@ function setupSystem() {
     formatAppSheet_(sheet);
     installValidations_(sheet);
     insertSampleRowsIfEmpty_(sheet);
+    const adminKey = ensureAdminKey_();
 
     const result = {
       success: true,
       message: 'ติดตั้ง Centralized App Hub Database สำเร็จ',
       spreadsheetId: spreadsheet.getId(),
       spreadsheetUrl: spreadsheet.getUrl(),
-      sheetName: sheet.getName()
+      sheetName: sheet.getName(),
+      adminKey: adminKey
     };
     console.log(JSON.stringify(result, null, 2));
     return result;
   } finally {
     lock.releaseLock();
   }
+}
+
+/** POST /exec action=create — เพิ่มแอปจากหน้าจัดการ */
+function doPost(e) {
+  try {
+    const params = (e && e.parameter) || {};
+    authorizeWrite_(params.admin_key);
+    const action = String(params.action || '').toLowerCase();
+    if (action !== 'create') return jsonResponse_(errorPayload_('UNSUPPORTED_ACTION', 'ไม่รองรับ action: ' + action));
+    const app = validateNewApp_(params);
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      const sheet = getAppSheet_();
+      const apps = readApps_();
+      if (apps.some(function (item) { return item.id === app.id; })) {
+        return jsonResponse_(errorPayload_('DUPLICATE_ID', 'มีแอป ID นี้อยู่แล้ว: ' + app.id));
+      }
+      sheet.appendRow(appToRow_(app));
+      return jsonResponse_({ success:true, message:'เพิ่มแอปสำเร็จ', data:app, timestamp:new Date().toISOString() });
+    } finally { lock.releaseLock(); }
+  } catch (error) {
+    console.error(error.stack || error);
+    return jsonResponse_(errorPayload_('WRITE_FAILED', error.message || String(error)));
+  }
+}
+
+function validateNewApp_(params) {
+  const title = cleanText_(params.title, 100);
+  const url = cleanUrl_(params.url);
+  if (!title) throw new Error('กรุณากรอกชื่อแอป');
+  if (!url) throw new Error('กรุณากรอก URL ของแอป');
+  const openType = String(params.open_type || 'embed').toLowerCase();
+  if (CONFIG.ALLOWED_OPEN_TYPES.indexOf(openType) < 0) throw new Error('open_type ต้องเป็น embed หรือ tab');
+  return {
+    id: createUniqueId_(title), title:title, category:cleanText_(params.category, 60) || 'อื่นๆ',
+    url:url, icon:cleanText_(params.icon, 500) || '🧩',
+    description:cleanText_(params.description, 300) || 'ไม่มีคำอธิบาย', open_type:openType
+  };
+}
+
+function cleanText_(value, maxLength) { return String(value || '').trim().slice(0, maxLength); }
+function cleanUrl_(value) {
+  const url = String(value || '').trim();
+  if (!/^https?:\/\//i.test(url)) throw new Error('URL ต้องขึ้นต้นด้วย http:// หรือ https://');
+  return url.slice(0, 2000);
+}
+function createUniqueId_(title) {
+  const slug = title.toLowerCase().replace(/[^a-z0-9ก-๙]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'app';
+  return slug + '-' + Utilities.getUuid().slice(0, 8);
+}
+function ensureAdminKey_() {
+  const properties = PropertiesService.getScriptProperties();
+  let key = properties.getProperty('HUB_ADMIN_KEY');
+  if (!key) { key = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, ''); properties.setProperty('HUB_ADMIN_KEY', key); }
+  return key;
+}
+function authorizeWrite_(providedKey) {
+  const expected = ensureAdminKey_();
+  if (!providedKey || String(providedKey) !== expected) throw new Error('รหัสผู้ดูแลไม่ถูกต้อง');
 }
 
 /** เมนูสำหรับ Apps Script ที่ผูกกับ Google Sheets */
