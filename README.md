@@ -39,6 +39,22 @@ centralized-app-hub/
 
 หลังแก้ Apps Script ให้เลือก **Deploy → Manage deployments → Edit → New version → Deploy** ทุกครั้ง
 
+### ติดตั้งตารางอัตโนมัติ
+
+ไฟล์ `Code.gs` รุ่นปัจจุบันเป็น JSON API v1 และมีฟังก์ชัน `setupSystem()` สำหรับสร้างฐานข้อมูลให้โดยอัตโนมัติ:
+
+1. วางโค้ดใน Apps Script แล้วเลือกฟังก์ชัน `setupSystem`
+2. กด **Run** และอนุญาตสิทธิ์
+3. ระบบจะสร้าง Spreadsheet/ชีต `Apps`, หัวตาราง, รูปแบบ, Filter, Data Validation และข้อมูลตัวอย่าง
+4. เปิด **Execution log** เพื่อดู `spreadsheetUrl`
+5. Deploy Web App เวอร์ชันใหม่
+
+API endpoints:
+
+- `/exec` หรือ `/exec?action=list` — รายการแอปแบบ JSON
+- `/exec?action=health` — ตรวจสอบสถานะ API/ฐานข้อมูล
+- `/exec?action=list&format=csv` — รายการแอปแบบ CSV
+
 > เว็บปลายทางบางแห่งห้ามแสดงผ่าน iframe ด้วย `X-Frame-Options` หรือ CSP ให้กำหนด `open_type=tab` หรือใช้ปุ่ม “เปิดแท็บใหม่” ใน Viewer
 
 ## Deploy บน GitHub Pages
