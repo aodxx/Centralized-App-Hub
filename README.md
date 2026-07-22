@@ -24,6 +24,21 @@ centralized-app-hub/
 5. เปิดหน้า Centralized App Hub กด **ตั้งค่า** วาง CSV URL แล้วกด **ทดสอบการเชื่อมต่อ**
 6. กด **บันทึกและ Sync** URL จะถูกเก็บใน LocalStorage ของ Browser
 
+## ทางเลือก: เชื่อมผ่าน Google Apps Script
+
+หากไม่ต้องการ Publish ชีตเป็น CSV ให้ใช้ไฟล์ `Code.gs` เป็น Web App endpoint:
+
+1. สร้างโปรเจกต์ที่ [script.google.com](https://script.google.com)
+2. คัดลอก `Code.gs` ไปวางใน Apps Script
+3. ใส่รหัสจาก URL Google Sheets ส่วนที่อยู่ระหว่าง `/d/` และ `/edit` ใน `CONFIG.SHEET_ID`
+4. เปลี่ยน `CONFIG.SHEET_NAME` ให้ตรงกับชื่อแท็บ เช่น `Apps`
+5. เลือก **Deploy → New deployment → Web app**
+6. ตั้ง **Execute as: Me** และ **Who has access: Anyone**
+7. อนุญาตสิทธิ์และคัดลอก URL ที่ลงท้าย `/exec`
+8. วาง URL `/exec` ในหน้า **ตั้งค่า** ของ Centralized App Hub แล้วกด **ทดสอบการเชื่อมต่อ**
+
+หลังแก้ Apps Script ให้เลือก **Deploy → Manage deployments → Edit → New version → Deploy** ทุกครั้ง
+
 > เว็บปลายทางบางแห่งห้ามแสดงผ่าน iframe ด้วย `X-Frame-Options` หรือ CSP ให้กำหนด `open_type=tab` หรือใช้ปุ่ม “เปิดแท็บใหม่” ใน Viewer
 
 ## Deploy บน GitHub Pages
