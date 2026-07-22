@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'centralizedAppHub.csvUrl';
+const ADMIN_KEY_STORAGE = 'centralizedAppHub.adminKey';
 const DEFAULT_DATA_URL = 'https://script.google.com/macros/s/AKfycbxeTCJAjVWo47aLzhIfPgGL4btHQiEn7pH1kH4pt1QWArOWqm02ThyhEhdsyt7YivpV/exec';
 const REQUIRED_COLUMNS = ['id','title','category','url','icon','description','open_type'];
 
@@ -9,7 +10,9 @@ const els = {
   status: $('#statusText'), filters: $('#categoryFilters'), search: $('#searchInput'), refresh: $('#refreshBtn'), settings: $('#settingsBtn'),
   modal: $('#settingsModal'), closeSettings: $('#closeSettingsBtn'), csvInput: $('#csvUrlInput'), test: $('#testBtn'), save: $('#saveBtn'),
   testResult: $('#testResult'), previewBody: $('#previewBody'), previewCount: $('#previewCount'), viewerTitle: $('#viewerTitle'),
-  frame: $('#appFrame'), frameLoading: $('#frameLoading'), reloadFrame: $('#reloadFrameBtn'), openNewTab: $('#openNewTabBtn'), toast: $('#toastRegion')
+  frame: $('#appFrame'), frameLoading: $('#frameLoading'), reloadFrame: $('#reloadFrameBtn'), openNewTab: $('#openNewTabBtn'), toast: $('#toastRegion'),
+  addApp: $('#addAppBtn'), addModal: $('#addAppModal'), closeAdd: $('#closeAddAppBtn'), cancelAdd: $('#cancelAddAppBtn'), addForm: $('#addAppForm'),
+  adminKey: $('#adminKeyInput'), submitApp: $('#submitAppBtn'), categorySuggestions: $('#categorySuggestions')
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -34,9 +37,14 @@ function bindEvents() {
   els.search.addEventListener('input', (e) => { state.query = e.target.value.trim().toLowerCase(); applyFilters(); });
   els.refresh.addEventListener('click', syncApps);
   els.settings.addEventListener('click', openSettings);
+  els.addApp.addEventListener('click', openAddApp);
+  els.closeAdd.addEventListener('click', closeAddApp);
+  els.cancelAdd.addEventListener('click', closeAddApp);
+  els.addModal.addEventListener('click', (e) => { if (e.target === els.addModal) closeAddApp(); });
+  els.addForm.addEventListener('submit', submitNewApp);
   els.closeSettings.addEventListener('click', closeSettings);
   els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeSettings(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSettings(); closeAddApp(); } });
   els.test.addEventListener('click', testConnection);
   els.save.addEventListener('click', saveAndSync);
   els.reloadFrame.addEventListener('click', () => { els.frameLoading.classList.remove('hidden'); els.frame.src = els.frame.src; });
@@ -125,8 +133,9 @@ function renderCards() {
   els.grid.replaceChildren(...state.filteredApps.map(createCard));
 }
 
-function createCard(app) {
+function createCard(app, index) {
   const card = document.createElement('article'); card.className = 'app-card';
+  card.style.animationDelay = `${Math.min(index * 55, 440)}ms`;
   const top = document.createElement('div'); top.className = 'flex items-start justify-between gap-3';
   const icon = createIcon(app.icon);
   const badge = document.createElement('span'); badge.className = 'rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600'; badge.textContent = app.category;
@@ -172,6 +181,41 @@ async function syncApps() {
 
 function openSettings() { els.csvInput.value = getCsvUrl(); els.testResult.classList.add('hidden'); renderPreview(state.apps); els.modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
 function closeSettings() { els.modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+
+function openAddApp() {
+  els.adminKey.value = localStorage.getItem(ADMIN_KEY_STORAGE) || '';
+  const categories = [...new Set(state.apps.map((app) => app.category))];
+  els.categorySuggestions.replaceChildren(...categories.map((category) => {
+    const option = document.createElement('option'); option.value = category; return option;
+  }));
+  els.addModal.classList.remove('hidden'); document.body.classList.add('overflow-hidden');
+  setTimeout(() => $('#appTitle').focus(), 80);
+}
+
+function closeAddApp() { els.addModal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+
+async function submitNewApp(event) {
+  event.preventDefault();
+  const formData = new FormData(els.addForm);
+  const adminKey = els.adminKey.value.trim();
+  if (!adminKey) return showToast('กรุณากรอกรหัสผู้ดูแล', 'error');
+  const payload = new URLSearchParams({ action:'create', admin_key:adminKey });
+  for (const [key, value] of formData.entries()) payload.set(key, String(value).trim());
+  try {
+    assertSafeHttpUrl(payload.get('url'));
+    const icon = payload.get('icon'); if (icon && /^https?:\/\//i.test(icon)) assertSafeHttpUrl(icon);
+    setButtonBusy(els.submitApp, true);
+    const response = await fetch(getCsvUrl(), { method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:payload });
+    if (!response.ok) throw new Error(`บันทึกไม่สำเร็จ (HTTP ${response.status})`);
+    const result = JSON.parse(await response.text());
+    if (!result.success) throw new Error(result.error?.message || 'API บันทึกข้อมูลไม่สำเร็จ');
+    localStorage.setItem(ADMIN_KEY_STORAGE, adminKey);
+    els.addForm.reset(); closeAddApp();
+    state.apps = await fetchApps(getCsvUrl()); renderCategories(); applyFilters();
+    showToast(`เพิ่ม “${result.data.title}” สำเร็จ`, 'success');
+  } catch (error) { showToast(error.message, 'error'); }
+  finally { setButtonBusy(els.submitApp, false); }
+}
 
 async function testConnection() {
   setButtonBusy(els.test, true);
