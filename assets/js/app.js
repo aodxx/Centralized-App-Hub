@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'centralizedAppHub.csvUrl';
+const DEFAULT_DATA_URL = 'https://script.google.com/macros/s/AKfycbxeTCJAjVWo47aLzhIfPgGL4btHQiEn7pH1kH4pt1QWArOWqm02ThyhEhdsyt7YivpV/exec';
 const REQUIRED_COLUMNS = ['id','title','category','url','icon','description','open_type'];
 
 const state = { apps: [], filteredApps: [], category: 'ทั้งหมด', query: '', previewApps: [] };
@@ -42,15 +43,31 @@ function bindEvents() {
   els.frame.addEventListener('load', () => els.frameLoading.classList.add('hidden'));
 }
 
-function getCsvUrl() { return localStorage.getItem(STORAGE_KEY) || ''; }
+function getCsvUrl() { return localStorage.getItem(STORAGE_KEY) || DEFAULT_DATA_URL; }
 
 async function fetchApps(csvUrl) {
   if (!csvUrl) throw new Error('กรุณากำหนด Google Sheets CSV URL ก่อนใช้งาน');
   assertSafeHttpUrl(csvUrl);
   const response = await fetch(`${csvUrl}${csvUrl.includes('?') ? '&' : '?'}_=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`เชื่อมต่อไม่สำเร็จ (HTTP ${response.status})`);
-  const csvText = await response.text();
-  return parseCsv(csvText);
+  const responseText = await response.text();
+  return parseDataResponse(responseText);
+}
+
+function parseDataResponse(responseText) {
+  const trimmed = responseText.trim();
+  if (trimmed.startsWith('{')) {
+    let payload;
+    try { payload = JSON.parse(trimmed); } catch { throw new Error('JSON API ตอบกลับไม่ถูกต้อง'); }
+    if (!payload.success) throw new Error(payload.error?.message || 'API ตอบกลับว่าไม่สำเร็จ');
+    if (!Array.isArray(payload.data)) throw new Error('JSON API ไม่มี data array');
+    const seen = new Set();
+    return payload.data.map(normalizeApp).filter((app) => {
+      if (!app.id || !app.title || !app.url || seen.has(app.id)) return false;
+      seen.add(app.id); return true;
+    });
+  }
+  return parseCsv(responseText);
 }
 
 function parseCsv(csvText) {
