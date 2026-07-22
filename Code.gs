@@ -3,7 +3,7 @@
  * ตั้งค่า SHEET_ID/SHEET_NAME แล้ว Deploy เป็น Web app สำหรับผู้ใช้ Anyone
  */
 const CONFIG = Object.freeze({
-  SHEET_ID: 'PUT_YOUR_GOOGLE_SHEET_ID_HERE',
+  SHEET_ID: '1UjFeQiDO2GujV6i-b-lC6w_B6EUb5aDT5atQKKbvwB4',
   SHEET_NAME: 'Apps',
   REQUIRED_HEADERS: ['id', 'title', 'category', 'url', 'icon', 'description', 'open_type']
 });
