@@ -1,0 +1,4 @@
+id,title,category,url,icon,description,open_type
+farm-dashboard,ระบบจัดการฟาร์ม,งานฟาร์ม,https://example.com/farm,🐷,ติดตามข้อมูลและงานประจำวันภายในฟาร์ม,embed
+accounting,ระบบบัญชี,บัญชี,https://example.com/accounting,fa-calculator,ตรวจสอบรายรับรายจ่ายและรายงานทางการเงิน,embed
+google-drive,Google Drive,เครื่องมือส่วนตัว,https://drive.google.com,https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png,เปิดพื้นที่จัดเก็บและจัดการเอกสาร,tab
