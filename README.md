@@ -46,7 +46,7 @@ centralized-app-hub/
 1. วางโค้ดใน Apps Script แล้วเลือกฟังก์ชัน `setupSystem`
 2. กด **Run** และอนุญาตสิทธิ์
 3. ระบบจะสร้าง Spreadsheet/ชีต `Apps`, หัวตาราง, รูปแบบ, Filter, Data Validation และข้อมูลตัวอย่าง
-4. เปิด **Execution log** เพื่อดู `spreadsheetUrl`
+4. เปิด **Execution log** เพื่อดู `spreadsheetUrl` และ `adminKey`
 5. Deploy Web App เวอร์ชันใหม่
 
 API endpoints:
@@ -54,6 +54,9 @@ API endpoints:
 - `/exec` หรือ `/exec?action=list` — รายการแอปแบบ JSON
 - `/exec?action=health` — ตรวจสอบสถานะ API/ฐานข้อมูล
 - `/exec?action=list&format=csv` — รายการแอปแบบ CSV
+- `POST /exec` พร้อม `action=create` และ `admin_key` — เพิ่มแอปจากหน้าจัดการ
+
+หน้าเว็บมีปุ่ม **เพิ่มแอป** สำหรับบันทึกรายการใหม่ลง Google Sheets โดยตรง นำ `adminKey` จากผลลัพธ์ `setupSystem()` มากรอกครั้งแรก ระบบจะเก็บรหัสเฉพาะใน LocalStorage ของ Browser เครื่องนั้น
 
 > เว็บปลายทางบางแห่งห้ามแสดงผ่าน iframe ด้วย `X-Frame-Options` หรือ CSP ให้กำหนด `open_type=tab` หรือใช้ปุ่ม “เปิดแท็บใหม่” ใน Viewer
 
